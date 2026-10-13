@@ -1,0 +1,491 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SQL Compiler & Optimizer — PCD Innovative Assignment</title>
+  <meta name="description" content="A full 6-phase SQL Query Compiler and Cost-Based Optimizer built for Principles of Compiler Design.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Inter:wght@400;500;600;700&family=Syne:wght@700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <!-- ── Header ─────────────────────────────────────────── -->
+  <header class="app-header">
+    <div class="header-brand">
+      <div class="brand-logo">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+          <polyline points="4 17 10 11 4 5"/><line x1="12" y1="19" x2="20" y2="19"/>
+        </svg>
+      </div>
+      <div>
+        <div class="brand-title">SQL Compiler &amp; Optimizer</div>
+        <div class="brand-subtitle">// Principles of Compiler Design &mdash; Innovative Assignment</div>
+      </div>
+    </div>
+
+    <div class="header-actions">
+      <button id="btnOpenCatalog" class="btn btn-secondary">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/>
+        </svg>
+        DB Catalog
+      </button>
+      <button id="btnOpenTheory" class="btn btn-secondary">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
+        </svg>
+        Viva Guide
+      </button>
+    </div>
+  </header>
+
+  <!-- ── Main ───────────────────────────────────────────── -->
+  <main class="main-container">
+
+    <!-- Query Input Card -->
+    <section class="card query-card">
+      <div class="query-card-header">
+        <div class="preset-selector-container">
+          <span class="input-label">Scenario</span>
+          <select id="presetSelect" class="preset-dropdown">
+            <option value="">— select a demo query —</option>
+          </select>
+        </div>
+        <div id="scenarioBadge" class="concept-badge">PCD Concept</div>
+      </div>
+
+      <div class="editor-wrapper">
+        <div class="editor-header">
+          <span class="editor-title">query.sql — SQL-92 dialect</span>
+          <span id="compileTimeTag" class="compile-badge">Ready  (Ctrl+Enter to compile)</span>
+        </div>
+        <textarea id="sqlInput" class="sql-code-editor" spellcheck="false" rows="6"
+          placeholder="SELECT e.name, d.dept_name&#10;FROM employees e&#10;JOIN departments d ON e.dept_id = d.id&#10;WHERE e.salary > 70000;"></textarea>
+      </div>
+
+      <div class="query-card-footer">
+        <div class="editor-hints">
+          Supports <code>SELECT · FROM · JOIN · WHERE · GROUP BY · HAVING · ORDER BY · LIMIT</code>
+        </div>
+        <div class="action-buttons">
+          <button id="btnResetQuery" class="btn btn-ghost">Reset</button>
+          <button id="btnCompile" class="btn btn-primary">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+              <polygon points="5 3 19 12 5 21 5 3"/>
+            </svg>
+            Compile &amp; Optimize
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- Compiler Pipeline Stepper -->
+    <nav class="pipeline-stepper-container card">
+      <div class="stepper-bar" id="stepperBar">
+        <button class="step-btn active" data-tab="lexer">
+          <span class="step-num">01</span>
+          <span class="step-label">Lexical Scanner</span>
+          <span class="step-sub">DFA &amp; Tokens</span>
+        </button>
+        <button class="step-btn" data-tab="parser">
+          <span class="step-num">02</span>
+          <span class="step-label">Syntax Analysis</span>
+          <span class="step-sub">Parser &amp; AST</span>
+        </button>
+        <button class="step-btn" data-tab="semantic">
+          <span class="step-num">03</span>
+          <span class="step-label">Semantic Analysis</span>
+          <span class="step-sub">Symbol Table</span>
+        </button>
+        <button class="step-btn" data-tab="logical">
+          <span class="step-num">04</span>
+          <span class="step-label">Intermediate IR</span>
+          <span class="step-sub">Relational Algebra</span>
+        </button>
+        <button class="step-btn" data-tab="optimizer">
+          <span class="step-num">05</span>
+          <span class="step-label">Optimizer</span>
+          <span class="step-sub">RBO &amp; CBO</span>
+        </button>
+        <button class="step-btn" data-tab="codegen">
+          <span class="step-num">06</span>
+          <span class="step-label">Code Gen &amp; Exec</span>
+          <span class="step-sub">Volcano Iterator</span>
+        </button>
+      </div>
+    </nav>
+
+    <!-- Error Banner -->
+    <div id="errorBanner" class="alert-banner error-banner hidden">
+      <div class="alert-icon">⚠</div>
+      <div class="alert-content">
+        <h4 id="errorTitle">Compilation Error</h4>
+        <p id="errorMessage"></p>
+      </div>
+    </div>
+
+    <!-- ── Phase Panels ──────────────────────────────────── -->
+    <div class="panels-container">
+
+      <!-- Phase 1: Lexer -->
+      <section id="panel-lexer" class="phase-panel active">
+        <div class="panel-header">
+          <div>
+            <h2 class="panel-title">Phase 1 — Lexical Analysis</h2>
+            <p class="panel-desc">Scans raw SQL source characters into a typed Token Stream via Regular Expression matching & DFA state transitions. Identifies keywords, identifiers, literals, operators, and punctuation.</p>
+          </div>
+          <div class="panel-metrics">
+            <span class="metric-pill">Tokens: <strong id="tokenCount">—</strong></span>
+          </div>
+        </div>
+
+        <div class="card panel-content">
+          <div class="token-filter-bar">
+            Filter by category:
+            <button class="token-filter active" data-filter="ALL">All</button>
+            <button class="token-filter" data-filter="KEYWORD">Keyword</button>
+            <button class="token-filter" data-filter="IDENTIFIER">Identifier</button>
+            <button class="token-filter" data-filter="LITERAL">Literal</button>
+            <button class="token-filter" data-filter="OPERATOR">Operator</button>
+          </div>
+          <div class="table-responsive">
+            <table class="data-table" id="tokensTable">
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>Token Type</th>
+                  <th>Lexeme</th>
+                  <th>Line</th>
+                  <th>Col</th>
+                  <th>Category</th>
+                </tr>
+              </thead>
+              <tbody id="tokensTableBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- Phase 2: Parser -->
+      <section id="panel-parser" class="phase-panel">
+        <div class="panel-header">
+          <div>
+            <h2 class="panel-title">Phase 2 — Syntax Analysis (Recursive Descent Parser)</h2>
+            <p class="panel-desc">Validates the token stream against the SQL Context-Free Grammar using recursive descent with precedence climbing. Produces a hierarchical Abstract Syntax Tree (AST).</p>
+          </div>
+          <div class="tree-controls">
+            <button id="btnAstResetZoom" class="btn btn-sm btn-secondary">Reset View</button>
+            <button id="btnToggleAstJson" class="btn btn-sm btn-secondary">AST JSON</button>
+          </div>
+        </div>
+        <div class="card tree-container">
+          <div id="astTreeSvgContainer" class="svg-viewport"></div>
+          <pre id="astJsonView" class="json-code-view hidden"></pre>
+        </div>
+      </section>
+
+      <!-- Phase 3: Semantic -->
+      <section id="panel-semantic" class="phase-panel">
+        <div class="panel-header">
+          <div>
+            <h2 class="panel-title">Phase 3 — Semantic Analysis &amp; Symbol Table Binding</h2>
+            <p class="panel-desc">Validates referenced tables and columns against the Database Catalog, resolves ambiguous identifier scope, checks data type compatibility.</p>
+          </div>
+          <span id="semanticStatusBadge" class="status-badge success">✓ Schema Validated</span>
+        </div>
+
+        <div class="grid-2-cols">
+          <div class="card">
+            <div class="card-title">Symbol Table — Active Query Scope</div>
+            <div class="card-subtitle">Bound table aliases, schema columns and their resolved types</div>
+            <div id="symbolTableContainer" class="symbol-table-list"></div>
+          </div>
+          <div class="card">
+            <div class="card-title">Semantic Diagnostics &amp; Type Checking</div>
+            <div class="card-subtitle">Schema binding results, ambiguity checks and type rule violations</div>
+            <div id="semanticDiagnostics" class="diagnostics-list"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Phase 4: Logical IR -->
+      <section id="panel-logical" class="phase-panel">
+        <div class="panel-header">
+          <div>
+            <h2 class="panel-title">Phase 4 — Intermediate Code Generation (Logical IR)</h2>
+            <p class="panel-desc">Translates the annotated AST into a canonical Relational Algebra Operator Tree — the machine-independent Intermediate Representation (IR) of the query.</p>
+          </div>
+          <div class="ir-header-controls">
+            <div class="btn-group">
+              <button id="btnIrToggleSql" class="btn btn-sm btn-secondary active">SQL Structure</button>
+              <button id="btnIrToggleRa" class="btn btn-sm btn-secondary">Relational Algebra (π, σ, ⨝)</button>
+            </div>
+            <button id="btnIrToggleLabels" class="btn btn-sm btn-secondary">Labels: SQL Terms</button>
+          </div>
+        </div>
+        <div class="card tree-container">
+          <div class="ir-formula-banner" id="canonicalFormulaBanner">
+            <span class="formula-label" id="canonicalBannerLabel">SQL Structure:</span>
+            <code id="canonicalFormulaCode" class="formula-math">Compiling…</code>
+          </div>
+          <div id="logicalTreeSvgContainer" class="svg-viewport"></div>
+        </div>
+      </section>
+
+      <!-- Phase 5: Optimizer -->
+      <section id="panel-optimizer" class="phase-panel">
+        <div class="panel-header">
+          <div>
+            <h2 class="panel-title">Phase 5 — Query Optimization (Rule-Based &amp; Cost-Based)</h2>
+            <p class="panel-desc">Applies algebraic tree-rewriting passes (RBO) directly translated to optimized SQL, and evaluates physical execution costs (CBO) using catalog statistics.</p>
+          </div>
+          <div class="optimization-summary-pills">
+            <span class="summary-pill success" id="cboSpeedupTag">Speedup: —</span>
+            <span class="summary-pill info" id="cboScanReductionTag">Cost Δ: —</span>
+          </div>
+        </div>
+
+        <!-- ✨ Prominent Final Optimized SQL Query Showcase -->
+        <div class="card final-optimized-sql-card" id="finalOptimizedSqlCard">
+          <div class="optimized-sql-header">
+            <div class="optimized-title-group">
+              <span class="sparkle-icon">✨</span>
+              <div>
+                <div class="card-title">Final Equivalent Optimized SQL Query</div>
+                <div class="card-subtitle">De-compiled directly from the optimized IR plan after all compiler rewrite passes:</div>
+              </div>
+            </div>
+            <div class="sql-view-actions">
+              <div class="btn-group">
+                <button id="btnSqlStyleClean" class="btn btn-xs btn-secondary active">Clean SQL</button>
+                <button id="btnSqlStylePushdown" class="btn btn-xs btn-secondary">Explicit Pushdown SQL</button>
+              </div>
+              <button id="btnCopyOptimizedSql" class="btn btn-xs btn-primary">
+                <span id="copySqlBtnText">📋 Copy SQL</span>
+              </button>
+              <button id="btnLoadOptimizedSql" class="btn btn-xs btn-secondary" title="Load into SQL Editor">
+                <span>⚡ Load in Editor</span>
+              </button>
+            </div>
+          </div>
+          <div class="sql-code-container">
+            <pre class="sql-code-pre"><code id="finalOptimizedSqlCode" class="sql-highlight">-- Generating optimized SQL...</code></pre>
+          </div>
+          <div class="optimization-badges-row" id="optimizationBadgesRow">
+            <span class="opt-badge"><span class="opt-check">✓</span> <strong>Constant Folding:</strong> Evaluated static arithmetic at compile time</span>
+            <span class="opt-badge"><span class="opt-check">✓</span> <strong>Dead Predicates:</strong> Stripped boolean tautologies</span>
+            <span class="opt-badge"><span class="opt-check">✓</span> <strong>Predicate Pushdown:</strong> Pre-filtered at storage before join</span>
+            <span class="opt-badge"><span class="opt-check">✓</span> <strong>Column Pruning:</strong> Only strictly needed columns loaded</span>
+          </div>
+        </div>
+
+        <!-- RBO Stepper -->
+        <div class="card rbo-stepper-card">
+          <div class="rbo-stepper-header">
+            <div>
+              <div class="card-title">Rule-Based Optimization (RBO) — Step-by-Step Transformation</div>
+              <div class="card-subtitle">Follow each rule pass to see both the algebraic tree rewriting and the resulting rewritten SQL query:</div>
+            </div>
+            <div class="rbo-step-buttons" id="rboStepButtons"></div>
+          </div>
+
+          <div class="rbo-step-detail-box">
+            <div class="rbo-rule-title" id="rboRuleTitle">Select a step above</div>
+            <div class="rbo-rule-desc" id="rboRuleDesc"></div>
+            <div class="rbo-rule-diff-summary" id="rboRuleDiffSummary"></div>
+          </div>
+
+          <!-- Step Rewritten SQL Card -->
+          <div class="rbo-sql-step-card" id="rboSqlStepCard">
+            <div class="rbo-sql-step-header">
+              <span class="rbo-sql-step-label">Equivalent SQL Query at this Step:</span>
+              <span class="rbo-sql-step-desc" id="rboSqlStepExplanation"></span>
+            </div>
+            <pre class="rbo-sql-code-pre"><code id="rboStepSqlCode">-- Step SQL</code></pre>
+          </div>
+
+          <div class="diff-header-bar">
+            <span class="diff-pane-title">Plan Tree Diff (Before ✕ vs After ✓):</span>
+            <button id="btnDiffToggleLabels" class="btn btn-xs btn-secondary">Labels: SQL Terms</button>
+          </div>
+
+          <div class="grid-2-cols diff-tree-grid">
+            <div>
+              <div class="diff-pane-title">Before — Baseline Plan</div>
+              <div id="rboBeforeTreeSvgContainer" class="svg-viewport svg-viewport-diff"></div>
+            </div>
+            <div>
+              <div class="diff-pane-title">After — Transformed Plan</div>
+              <div id="rboAfterTreeSvgContainer" class="svg-viewport svg-viewport-diff"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- CBO Breakdown -->
+        <div class="card cbo-breakdown-card">
+          <div class="card-title">Cost-Based Optimizer (CBO) — Selectivity &amp; Cost Model</div>
+          <div class="card-subtitle" style="margin-bottom:0;">Formula: Selectivity S(col=val) = 1/V(A,R) &nbsp;·&nbsp; Total Cost = I/O cost + CPU cost</div>
+
+          <div class="cbo-comparison-grid">
+            <div class="cbo-card unoptimized">
+              <h4>Unoptimized Plan</h4>
+              <div class="cbo-cost-val" id="cboUnoptCost">—</div>
+              <div class="cbo-cost-unit">cost units</div>
+              <div class="cbo-row-est">est. rows: <span id="cboUnoptRows">—</span></div>
+            </div>
+
+            <div class="cbo-arrow">
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/>
+              </svg>
+              <span class="cbo-efficiency" id="cboEfficiencyTag">—</span>
+            </div>
+
+            <div class="cbo-card optimized">
+              <h4>Optimized Plan</h4>
+              <div class="cbo-cost-val" id="cboOptCost">—</div>
+              <div class="cbo-cost-unit">cost units</div>
+              <div class="cbo-row-est">est. rows: <span id="cboOptRows">—</span></div>
+            </div>
+          </div>
+
+          <div class="table-responsive">
+            <table class="data-table" id="cboTable">
+              <thead>
+                <tr>
+                  <th>Node ID</th>
+                  <th>Operator</th>
+                  <th>Selectivity</th>
+                  <th>I/O Cost</th>
+                  <th>CPU Cost</th>
+                  <th>Total Cost</th>
+                  <th>Est. Rows</th>
+                  <th>Rationale</th>
+                </tr>
+              </thead>
+              <tbody id="cboTableBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- Phase 6: Code Gen & Execution -->
+      <section id="panel-codegen" class="phase-panel">
+        <div class="panel-header">
+          <div>
+            <h2 class="panel-title">Phase 6 — Code Generation &amp; Volcano Iterator Execution</h2>
+            <p class="panel-desc">Translates the optimized logical plan into a pipeline of Volcano physical iterators (SeqScan, HashJoin, Filter, Project…) each implementing <code>open() → next()* → close()</code>. Executes against a live in-memory 500-row relational database.</p>
+          </div>
+        </div>
+
+        <!-- Metrics -->
+        <div class="grid-3-cols metrics-dashboard">
+          <div class="metric-card">
+            <div class="metric-label">Rows Scanned (Storage I/O)</div>
+            <div class="metric-compare">
+              <div class="compare-item">
+                <span class="tag unopt">Unoptimized</span>
+                <span class="val" id="metricUnoptScanned">—</span>
+              </div>
+              <div class="compare-item" style="text-align:right;">
+                <span class="tag opt">Optimized</span>
+                <span class="val highlight" id="metricOptScanned">—</span>
+              </div>
+            </div>
+            <div class="progress-bar-bg">
+              <div class="progress-bar-fill" id="metricScanBar" style="width:100%"></div>
+            </div>
+            <span class="metric-footer-text" id="metricScanSavings">—</span>
+          </div>
+
+          <div class="metric-card">
+            <div class="metric-label">Execution Latency</div>
+            <div class="metric-compare">
+              <div class="compare-item">
+                <span class="tag unopt">Unoptimized</span>
+                <span class="val" id="metricUnoptTime">—</span>
+              </div>
+              <div class="compare-item" style="text-align:right;">
+                <span class="tag opt">Optimized</span>
+                <span class="val highlight" id="metricOptTime">—</span>
+              </div>
+            </div>
+            <span class="metric-footer-text" id="metricTimeSavings">—</span>
+          </div>
+
+          <div class="metric-card">
+            <div class="metric-label">Query Output</div>
+            <div class="metric-big-val"><span id="metricRowsReturned">—</span> <small>rows</small></div>
+            <span class="metric-footer-text">Projected &amp; verified output tuples</span>
+          </div>
+        </div>
+
+        <!-- Results Grid -->
+        <div class="card result-grid-card">
+          <div class="result-header">
+            <div class="card-title">Result Set</div>
+            <input type="text" id="resultsFilterInput" class="search-input" placeholder="Search rows…">
+          </div>
+          <div class="table-responsive">
+            <table class="data-table" id="resultsDataTable">
+              <thead id="resultsTableHead"></thead>
+              <tbody id="resultsTableBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+    </div><!-- /panels -->
+  </main>
+
+  <!-- ── Theory / Viva Modal ───────────────────────────── -->
+  <div id="theoryModal" class="modal-overlay hidden">
+    <div class="modal-card">
+      <div class="modal-header">
+        <div>
+          <div class="modal-title">PCD Theory Guide &amp; Viva Q&amp;A</div>
+          <div class="modal-subtitle">Dragon Book phase mapping · Relational Algebra rules · Common viva questions with model answers</div>
+        </div>
+        <button id="btnCloseTheory" class="btn-close">&times;</button>
+      </div>
+      <div class="modal-tabs">
+        <button class="modal-tab-btn active" data-modaltab="dragon">Dragon Book Phases</button>
+        <button class="modal-tab-btn" data-modaltab="algebra">Algebraic Equivalences</button>
+        <button class="modal-tab-btn" data-modaltab="viva">Viva Q&amp;A</button>
+      </div>
+      <div class="modal-body">
+        <div id="modalTab-dragon" class="modal-tab-content active">
+          <div class="pcd-phases-grid" id="dragonPhasesList"></div>
+        </div>
+        <div id="modalTab-algebra" class="modal-tab-content">
+          <div class="algebra-rules-list" id="algebraRulesList"></div>
+        </div>
+        <div id="modalTab-viva" class="modal-tab-content">
+          <div class="viva-qa-list" id="vivaQaList"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── DB Catalog Modal ──────────────────────────────── -->
+  <div id="catalogModal" class="modal-overlay hidden">
+    <div class="modal-card">
+      <div class="modal-header">
+        <div>
+          <div class="modal-title">Database Catalog</div>
+          <div class="modal-subtitle">Schema definitions, indexes, and statistical metadata used by the CBO cost model</div>
+        </div>
+        <button id="btnCloseCatalog" class="btn-close">&times;</button>
+      </div>
+      <div class="modal-body" id="catalogTablesContainer"></div>
+    </div>
+  </div>
+
+  <!-- D3 for tree rendering -->
+  <script src="https://d3js.org/d3.v7.min.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

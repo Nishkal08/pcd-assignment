@@ -1,0 +1,29 @@
+{
+  "name": "sql-query-compiler-optimizer",
+  "version": "1.0.0",
+  "description": "SQL Query Compiler and Optimizer for Principles of Compiler Design (PCD)",
+  "main": "src/server.js",
+  "type": "module",
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "node --watch src/server.js",
+    "test": "node test/test_compiler.js"
+  },
+  "keywords": [
+    "compiler-design",
+    "sql",
+    "lexer",
+    "parser",
+    "ast",
+    "query-optimizer",
+    "relational-algebra",
+    "volcano-iterator",
+    "cost-based-optimizer"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^4.19.2"
+  }
+}
